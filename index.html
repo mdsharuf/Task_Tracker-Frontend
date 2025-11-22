@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Task Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .app-container {
+      width: 100%;
+      max-width: 960px;
+    }
+    .card {
+      background: #020617;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #1f2937;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+    }
+    .app-header h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    .app-header p {
+      color: #9ca3af;
+      font-size: 0.95rem;
+    }
+    .task-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .form-group label {
+      font-size: 0.9rem;
+      color: #9ca3af;
+    }
+    .form-group input,
+    .form-group textarea {
+      border-radius: 0.5rem;
+      border: 1px solid #1f2937;
+      background: #020617;
+      color: #e5e7eb;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.95rem;
+    }
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    .btn {
+      border-radius: 999px;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid #374151;
+      color: #e5e7eb;
+    }
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    .btn-small {
+      padding: 0.3rem 0.75rem;
+      font-size: 0.8rem;
+    }
+    .error-text {
+      margin-top: 0.5rem;
+      color: #f97316;
+      font-size: 0.85rem;
+    }
+    .card-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .task-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    .task-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 0.75rem;
+      background: #020617;
+      border: 1px solid #111827;
+    }
+    .task-main {
+      display: flex;
+      gap: 0.75rem;
+      flex: 1;
+    }
+    .task-texts {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    .task-title {
+      font-size: 0.95rem;
+    }
+    .task-title-completed {
+      text-decoration: line-through;
+      color: #6b7280;
+    }
+    .task-desc {
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
+    .task-meta {
+      font-size: 0.75rem;
+      color: #4b5563;
+    }
+    .task-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    @media (max-width: 640px) {
+      .task-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .task-actions {
+        align-self: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header class="card app-header">
+      <h1>Task Tracker</h1>
+      <p>Simple CRUD app for your DevOps deployment practice.</p>
+    </header>
+
+    <section class="card">
+      <h2>Add / Edit Task</h2>
+      <form id="task-form" class="task-form">
+        <input type="hidden" id="task-id" />
+        <div class="form-group">
+          <label for="title">Title *</label>
+          <input id="title" placeholder="e.g. Setup CI/CD pipeline" />
+        </div>
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" placeholder="Optional details..."></textarea>
+        </div>
+        <div>
+          <button type="submit" class="btn btn-primary" id="submit-btn">
+            Create Task
+          </button>
+          <button type="button" class="btn btn-ghost" id="cancel-btn" style="display: none;">
+            Cancel
+          </button>
+        </div>
+        <p id="error-text" class="error-text"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="card-header-row">
+        <h2>Tasks</h2>
+        <button type="button" class="btn btn-ghost btn-small" id="refresh-btn">
+          Refresh
+        </button>
+      </div>
+      <p id="loading-text" style="font-size:0.9rem; color:#9ca3af;"></p>
+      <ul id="task-list" class="task-list"></ul>
+    </section>
+  </div>
+
+  <script>
+    const API_BASE_URL = "http://localhost:3001"; // backend will run here
+
+    const taskForm = document.getElementById("task-form");
+    const taskIdInput = document.getElementById("task-id");
+    const titleInput = document.getElementById("title");
+    const descInput = document.getElementById("description");
+    const submitBtn = document.getElementById("submit-btn");
+    const cancelBtn = document.getElementById("cancel-btn");
+    const errorText = document.getElementById("error-text");
+    const taskList = document.getElementById("task-list");
+    const loadingText = document.getElementById("loading-text");
+    const refreshBtn = document.getElementById("refresh-btn");
+
+    async function fetchTasks() {
+      loadingText.textContent = "Loading tasks...";
+      errorText.textContent = "";
+      taskList.innerHTML = "";
+      try {
+        const res = await fetch(API_BASE_URL + "/api/tasks");
+        if (!res.ok) throw new Error("Failed to fetch tasks");
+        const tasks = await res.json();
+        if (tasks.length === 0) {
+          taskList.innerHTML = "<li>No tasks yet. Add one above.</li>";
+          loadingText.textContent = "";
+          return;
+        }
+        for (const task of tasks) {
+          const li = document.createElement("li");
+          li.className = "task-item";
+
+          const mainDiv = document.createElement("div");
+          mainDiv.className = "task-main";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = !!task.completed;
+          checkbox.addEventListener("change", () => toggleTask(task.id));
+
+          const texts = document.createElement("div");
+          texts.className = "task-texts";
+
+          const titleSpan = document.createElement("span");
+          titleSpan.className = "task-title" + (task.completed ? " task-title-completed" : "");
+          titleSpan.textContent = task.title;
+
+          const descSpan = document.createElement("span");
+          descSpan.className = "task-desc";
+          if (task.description) descSpan.textContent = task.description;
+
+          const metaSpan = document.createElement("span");
+          metaSpan.className = "task-meta";
+          metaSpan.textContent =
+            "ID: " + task.id + " • Created at: " +
+            new Date(task.created_at).toLocaleString();
+
+          texts.appendChild(titleSpan);
+          if (task.description) texts.appendChild(descSpan);
+          texts.appendChild(metaSpan);
+
+          mainDiv.appendChild(checkbox);
+          mainDiv.appendChild(texts);
+
+          const actionsDiv = document.createElement("div");
+          actionsDiv.className = "task-actions";
+
+          const editBtn = document.createElement("button");
+          editBtn.className = "btn btn-ghost btn-small";
+          editBtn.textContent = "Edit";
+          editBtn.addEventListener("click", () => startEdit(task));
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "btn btn-danger btn-small";
+          deleteBtn.textContent = "Delete";
+          deleteBtn.addEventListener("click", () => deleteTask(task.id));
+
+          actionsDiv.appendChild(editBtn);
+          actionsDiv.appendChild(deleteBtn);
+
+          li.appendChild(mainDiv);
+          li.appendChild(actionsDiv);
+
+          taskList.appendChild(li);
+        }
+      } catch (err) {
+        console.error(err);
+        errorText.textContent = err.message || "Failed to load tasks";
+      } finally {
+        loadingText.textContent = "";
+      }
+    }
+
+    async function createTask(title, description) {
+      const res = await fetch(API_BASE_URL + "/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description }),
+      });
+      if (!res.ok) throw new Error("Failed to create task");
+      return res.json();
+    }
+
+    async function updateTask(id, title, description) {
+      const res = await fetch(API_BASE_URL + "/api/tasks/" + id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description }),
+      });
+      if (!res.ok) throw new Error("Failed to update task");
+      return res.json();
+    }
+
+    async function deleteTask(id) {
+      if (!confirm("Delete this task?")) return;
+      try {
+        const res = await fetch(API_BASE_URL + "/api/tasks/" + id, {
+          method: "DELETE",
+        });
+        if (!res.ok && res.status !== 204) throw new Error("Failed to delete task");
+        await fetchTasks();
+      } catch (err) {
+        console.error(err);
+        errorText.textContent = err.message || "Failed to delete task";
+      }
+    }
+
+    async function toggleTask(id) {
+      try {
+        const res = await fetch(API_BASE_URL + "/api/tasks/" + id + "/toggle", {
+          method: "PATCH",
+        });
+        if (!res.ok) throw new Error("Failed to toggle task");
+        await fetchTasks();
+      } catch (err) {
+        console.error(err);
+        errorText.textContent = err.message || "Failed to toggle task";
+      }
+    }
+
+    function startEdit(task) {
+      taskIdInput.value = task.id;
+      titleInput.value = task.title;
+      descInput.value = task.description || "";
+      submitBtn.textContent = "Update Task";
+      cancelBtn.style.display = "inline-block";
+    }
+
+    function resetForm() {
+      taskIdInput.value = "";
+      titleInput.value = "";
+      descInput.value = "";
+      submitBtn.textContent = "Create Task";
+      cancelBtn.style.display = "none";
+      errorText.textContent = "";
+    }
+
+    taskForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const title = titleInput.value.trim();
+      const description = descInput.value.trim();
+      const id = taskIdInput.value;
+
+      if (!title) {
+        errorText.textContent = "Title is required";
+        return;
+      }
+
+      try {
+        errorText.textContent = "";
+        if (id) {
+          await updateTask(id, title, description);
+        } else {
+          await createTask(title, description);
+        }
+        resetForm();
+        await fetchTasks();
+      } catch (err) {
+        console.error(err);
+        errorText.textContent = err.message || "Failed to save task";
+      }
+    });
+
+    cancelBtn.addEventListener("click", resetForm);
+    refreshBtn.addEventListener("click", fetchTasks);
+
+    fetchTasks();
+  </script>
+</body>
+</html>
