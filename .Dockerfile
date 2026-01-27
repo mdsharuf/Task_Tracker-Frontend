@@ -1,12 +1,12 @@
 FROM nginx:alpine
 
-# Remove default nginx index page
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy your static frontend
-COPY index.html /usr/share/nginx/html/index.html
+COPY index.html /usr/share/nginx/html/
+COPY env.js /usr/share/nginx/html/
 
-# Nginx listens on 80 in the container
+# Replace env variables at container start
+CMD sh -c "envsubst < /usr/share/nginx/html/env.js > /usr/share/nginx/html/env.js && nginx -g 'daemon off;'"
+
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
