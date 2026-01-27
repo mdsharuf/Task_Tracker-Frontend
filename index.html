@@ -203,7 +203,7 @@
   </div>
 
   <script>
-    const API_BASE_URL = "http://localhost:3001"; // backend will run here
+    const API_BASE_URL = window.API_BASE_URL || "http://localhost:3001";
 
     const taskForm = document.getElementById("task-form");
     const taskIdInput = document.getElementById("task-id");
